@@ -1,0 +1,9 @@
+{
+  "development": {
+    "username": "a user",
+    "password": "a password",
+    "database": "product_catalog",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  }
+}
