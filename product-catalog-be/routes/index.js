@@ -20,7 +20,8 @@ async function mainRouter(req, res) {
 
   if (
     parsedUrl.pathname.startsWith("/api/register") ||
-    parsedUrl.pathname.startsWith("/api/login")
+    parsedUrl.pathname.startsWith("/api/login") ||
+    parsedUrl.pathname.startsWith("/api/auth/check")
   ) {
     return authRoutes(req, res);
   }

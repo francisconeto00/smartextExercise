@@ -41,7 +41,16 @@ async function getAllProducts(req, res) {
     const totalPages = Math.ceil(count / pageSize);
     logger.info(`Found ${count} products`);
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(products));
+    res.end(
+      JSON.stringify({
+        data: products,
+        pagination: {
+          page,
+          pageSize,
+          totalPages,
+        },
+      })
+    );
   } catch (err) {
     res.writeHead(500);
     res.end(err.message);
@@ -144,8 +153,13 @@ async function deleteProducts(req, res) {
 
   req.on("end", async () => {
     try {
-      logger.info(`deleteProducts called with body=${body}`);
-      const { ids } = JSON.parse(body);
+      let parsed = JSON.parse(body);
+
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
+      }
+      const { ids } = parsed;
+      console.log("ids", ids);
       if (!Array.isArray(ids) || ids.length === 0) {
         logger.warn("deleteProducts failed: Missing or invalid ids");
         res.writeHead(400);

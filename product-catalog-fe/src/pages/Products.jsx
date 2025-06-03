@@ -1,6 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { getProducts, updateProduct } from "../services/products";
+import {
+  getProducts,
+  updateProduct,
+  deleteProducts,
+} from "../services/products";
 import { getCategories } from "../services/categories";
 import SearchAndFilterBar from "../components/common/SearchAndFilterBar";
 import ProductCard from "../components/common/ProductCard";
@@ -10,28 +14,37 @@ import ProductForm from "../components/forms/ProductForm";
 import { useDisclosure } from "@mantine/hooks";
 import { Modal } from "@mantine/core";
 import ConfirmModal from "../components/modals/ConfirmModal";
+import PaginationControls from "../components/common/PaginationControls";
 
 export default function Products() {
-const [categories, setCategories] = useState([]);
-const [products, setProducts] = useState([]);
-const location = useLocation();
-const { getQueryParam } = useQueryParams();
-const searchQuery = getQueryParam("search") || "";
-const [opened, { open, close }] = useDisclosure(false);
-const [selectedProduct, setSelectedProduct] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const location = useLocation();
+  const { getQueryParam } = useQueryParams();
+  const searchQuery = getQueryParam("search") || "";
+  const [opened, { open, close }] = useDisclosure(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    totalPages: 1,
+  });
 
-const [confirmOpened, setConfirmOpened] = useState(false);
+  const [confirmOpened, setConfirmOpened] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
-const selectedCategories = useMemo(() => {
-  const raw = getQueryParam("categories");
-  return raw ? raw.split(",") : [];
-}, [location.search]);
+  const selectedCategories = useMemo(() => {
+    const raw = getQueryParam("categories");
+    return raw ? raw.split(",") : [];
+  }, [location.search]);
+
+  const page = parseInt(getQueryParam("page") || "1");
+  const pageSize = parseInt(getQueryParam("pageSize") || "10");
 
   useEffect(() => {
     getCategories()
       .then((data) => {
-        // Map categories to { value, label } 
+        // Map categories to { value, label }
         const mapped = data.map((c) => ({
           value: String(c.id),
           label: c.title,
@@ -42,19 +55,30 @@ const selectedCategories = useMemo(() => {
         console.log(err.message || "Error fetching categories");
       });
   }, []);
-  
-  useEffect(() => {
-    getProducts({ search: searchQuery, categories: selectedCategories })
-      .then(setProducts)
+  const fetchProducts = () => {
+    return getProducts({
+      search: searchQuery,
+      categories: selectedCategories,
+      page,
+      pageSize,
+    })
+      .then(({ data, pagination }) => {
+        setProducts(data);
+        setPagination(pagination);
+      })
       .catch((err) => {
         console.log(err.message || "Error fetching products");
       });
-  }, [searchQuery, selectedCategories]);
+  };
+  useEffect(() => {
+    fetchProducts();
+  }, [searchQuery, selectedCategories, page, pageSize]);
 
-   const handleEdit = (product) => {
+  const handleEdit = (product) => {
     setSelectedProduct(product);
     open();
   };
+
   const handleEditSubmit = async (formData) => {
     if (!selectedProduct) return;
 
@@ -67,21 +91,20 @@ const selectedCategories = useMemo(() => {
       });
 
       const matchedCategory = categories.find(
-      (c) => c.value === String(formData.categoryId)
-    );
+        (c) => c.value === String(formData.categoryId)
+      );
 
       const enrichedProduct = {
-      ...updated,
-      category: {
-        id: formData.categoryId,
-        title: matchedCategory?.label || "Category not found",
-      },
-    };
+        ...updated,
+        category: {
+          id: formData.categoryId,
+          title: matchedCategory?.label || "Category not found",
+        },
+      };
 
-    setProducts((prev) =>
-      prev.map((p) => (p.id === enrichedProduct.id ? enrichedProduct : p))
-    );
-
+      setProducts((prev) =>
+        prev.map((p) => (p.id === enrichedProduct.id ? enrichedProduct : p))
+      );
 
       close();
     } catch (error) {
@@ -89,34 +112,40 @@ const selectedCategories = useMemo(() => {
     }
   };
 
-   const handleDelete = (product) => {
+  const handleDelete = (product) => {
     setProductToDelete(product);
     setConfirmOpened(true);
   };
 
-    const handleConfirmDelete = () => {
-    if (productToDelete) {
-      console.log("Product to delete id:", productToDelete.id);
-     
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
+
+    try {
+      await deleteProducts([productToDelete.id]);
+
+      await fetchProducts();
+
+      setConfirmOpened(false);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error("Error deleting product:", error.message);
     }
-    setConfirmOpened(false);
-    setProductToDelete(null);
   };
 
   const handleCancelDelete = () => {
     setConfirmOpened(false);
     setProductToDelete(null);
   };
-  
+
   return (
-    <div>
-       <SearchAndFilterBar
+    <div className="pb-10">
+      <SearchAndFilterBar
         searchKey="search"
         filterKey="categories"
         filterOptions={categories}
       />
 
-      <div className="mt-5">
+      <div className="mt-5 min-h-[80dvh] flex flex-col justify-between">
         <GridWrapper>
           {products.length ? (
             products.map((product) => (
@@ -131,13 +160,20 @@ const selectedCategories = useMemo(() => {
             <p>No products found.</p>
           )}
         </GridWrapper>
-        <Modal
+        <PaginationControls
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalPages={pagination.totalPages}
+        />
+      </div>
+
+      <Modal
         opened={opened}
         onClose={close}
-        title="Editar Produto"
+        title="Edit Product"
         centered
         size="lg"
-        lockScroll={false} 
+        lockScroll={false}
       >
         {selectedProduct && (
           <ProductForm
@@ -149,13 +185,14 @@ const selectedCategories = useMemo(() => {
         )}
       </Modal>
 
-       <ConfirmModal
-          opened={confirmOpened}
-          onConfirm={handleConfirmDelete}
-          onCancel={handleCancelDelete}
-          message={`Delete "${productToDelete?.title || ""}". This action cannot be undone.`}
-        />
-      </div>
+      <ConfirmModal
+        opened={confirmOpened}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        message={`Delete "${
+          productToDelete?.title || ""
+        }". This action cannot be undone.`}
+      />
     </div>
-  )
+  );
 }

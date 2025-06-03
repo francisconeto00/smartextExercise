@@ -9,14 +9,34 @@ export function useQueryParams() {
     return params.get(key);
   };
 
-  const setQueryParam = (key, value) => {
+  const setQueryParam = (keyOrObject, value) => {
     const params = new URLSearchParams(location.search);
-    if (value === undefined || value === null || value === "") {
-      params.delete(key);
-    } else {
-      params.set(key, value);
+
+    if (typeof keyOrObject === "string") {
+      // Atualiza um único parâmetro
+      if (value === undefined || value === null || value === "") {
+        params.delete(keyOrObject);
+      } else {
+        params.set(keyOrObject, value);
+      }
+    } else if (typeof keyOrObject === "object" && keyOrObject !== null) {
+      // multiple sets
+      Object.entries(keyOrObject).forEach(([key, val]) => {
+        if (val === undefined || val === null || val === "") {
+          params.delete(key);
+        } else {
+          params.set(key, val);
+        }
+      });
     }
-    navigate({ search: params.toString() }, { replace: true });
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: params.toString(),
+      },
+      { replace: true }
+    );
   };
 
   return { getQueryParam, setQueryParam };

@@ -1,5 +1,4 @@
-import { IconPencil, IconTrash } from "@tabler/icons-react";
-
+import { FaPencilAlt, FaTrash } from "react-icons/fa";
 export default function ProductCard({ product, onEdit, onDelete }) {
   return (
     <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between gap-2">
@@ -14,18 +13,18 @@ export default function ProductCard({ product, onEdit, onDelete }) {
         <span className="text-lg font-bold text-primary">
           €{product.price.toFixed(2)}
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <button
             onClick={() => onEdit(product)}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-600 hover:text-blue-800 cursor-pointer"
           >
-            <IconPencil size={20} />
+            <FaPencilAlt size={20} />
           </button>
           <button
             onClick={() => onDelete(product)}
-            className="text-red-600 hover:text-red-800"
+            className="text-red-600 hover:text-red-800 cursor-pointer"
           >
-            <IconTrash size={20} />
+            <FaTrash size={20} />
           </button>
         </div>
       </div>

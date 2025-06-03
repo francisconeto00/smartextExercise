@@ -95,4 +95,34 @@ async function login(req, res) {
   });
 }
 
-module.exports = { register, login };
+async function checkAuth(req, res) {
+  const cookieHeader = req.headers.cookie;
+
+  if (!cookieHeader) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ error: "No token provided" }));
+  }
+
+  const token = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("token="))
+    ?.split("=")[1];
+
+  if (!token) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ error: "Token not found" }));
+  }
+
+  try {
+    const decoded = jwt.verify(token, secret);
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ message: "Authenticated" }));
+  } catch (err) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ error: "Invalid or expired token" }));
+  }
+}
+
+module.exports = { register, login, checkAuth };

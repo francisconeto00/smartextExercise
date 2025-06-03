@@ -1,9 +1,11 @@
-const baseUrl = import.meta.env.VITE_API_BASE_URL;
+const baseUrl =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
-async function api(
+export async function api(
   endpoint,
   { method = "GET", body, headers = {}, credentials = "include" } = {}
 ) {
+  console.log("baseUrl", baseUrl);
   const config = {
     method,
     headers: {
@@ -21,7 +23,11 @@ async function api(
 
   try {
     const response = await fetch(url, config);
-
+    // 'middleware'
+    if (response.status === 401 && endpoint !== "/auth/check") {
+      window.location.href = "/";
+      return;
+    }
     if (!response.ok) {
       let errorData;
       try {
@@ -42,5 +48,3 @@ async function api(
     throw error;
   }
 }
-
-export { api };
