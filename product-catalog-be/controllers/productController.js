@@ -7,9 +7,8 @@ async function getAllProducts(req, res) {
   try {
     const { query } = url.parse(req.url, true);
     const page = parseInt(query.page) || 1;
-    const pageSize = parseInt(query.pageSize) || 10;
+    const pageSize = parseInt(query.pageSize) || 112;
     const offset = (page - 1) * pageSize;
-    const limit = pageSize;
     logger.info(`getAllProducts called with page=${page} pageSize=${pageSize}`);
 
     const filters = {};
@@ -33,8 +32,8 @@ async function getAllProducts(req, res) {
 
     const { count, rows: products } = await Product.findAndCountAll({
       where: filters,
-      limit,
       offset,
+      limit: pageSize,
       include: { model: Category, as: "category", attributes: ["id", "title"] },
     });
 
@@ -159,7 +158,6 @@ async function deleteProducts(req, res) {
         parsed = JSON.parse(parsed);
       }
       const { ids } = parsed;
-      console.log("ids", ids);
       if (!Array.isArray(ids) || ids.length === 0) {
         logger.warn("deleteProducts failed: Missing or invalid ids");
         res.writeHead(400);

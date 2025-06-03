@@ -12,7 +12,7 @@ async function seedProducts() {
 
     const products = [];
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 100; i++) {
       const randomCategory =
         categories[Math.floor(Math.random() * categories.length)];
 

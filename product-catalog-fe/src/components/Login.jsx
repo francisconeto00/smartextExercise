@@ -1,34 +1,29 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, TextInput, Text, Stack } from "@mantine/core";
-import { login } from "../services/auth"
+import { login } from "../services/auth";
 export default function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const  handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
     const username = form.username.value;
     const password = form.password.value;
 
-    console.log("Username:", username);
-    console.log("Password:", password);
     try {
-      const data = await login(username, password);
-      console.log(data);
+      await login(username, password);
       navigate("/products");
     } catch (error) {
       console.error("Error", error.message);
       setError(error.message || "An error has occurred");
     }
-
   };
 
   return (
-    <Card shadow="none" padding="0"  maw={400} mx="auto" mt="xl">
+    <Card shadow="none" padding="0" maw={400} mx="auto" mt="xl">
       <form onSubmit={handleSubmit}>
         <Stack>
-
           <TextInput
             label="Username"
             name="username"

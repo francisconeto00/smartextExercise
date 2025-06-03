@@ -4,6 +4,7 @@ import {
   getProducts,
   updateProduct,
   deleteProducts,
+  createProduct,
 } from "../services/products";
 import { getCategories } from "../services/categories";
 import SearchAndFilterBar from "../components/common/SearchAndFilterBar";
@@ -15,6 +16,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { Modal } from "@mantine/core";
 import ConfirmModal from "../components/modals/ConfirmModal";
 import PaginationControls from "../components/common/PaginationControls";
+import { toast } from "react-toastify";
 
 export default function Products() {
   const [categories, setCategories] = useState([]);
@@ -26,7 +28,7 @@ export default function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 10,
+    pageSize: 12,
     totalPages: 1,
   });
 
@@ -39,11 +41,11 @@ export default function Products() {
   }, [location.search]);
 
   const page = parseInt(getQueryParam("page") || "1");
-  const pageSize = parseInt(getQueryParam("pageSize") || "10");
+  const pageSize = parseInt(getQueryParam("pageSize") || "12");
 
   useEffect(() => {
-    getCategories()
-      .then((data) => {
+    getCategories({ all: true })
+      .then(({ data }) => {
         // Map categories to { value, label }
         const mapped = data.map((c) => ({
           value: String(c.id),
@@ -80,35 +82,51 @@ export default function Products() {
   };
 
   const handleEditSubmit = async (formData) => {
-    if (!selectedProduct) return;
+    if (!selectedProduct) {
+      try {
+        await createProduct({
+          title: formData.title,
+          description: formData.description,
+          price: formData.price,
+          categoryId: formData.categoryId,
+        });
+        fetchProducts();
+        toast.success("Product successfully created");
+        close();
+      } catch (error) {
+        console.error("Error saving Product:", error.message);
+        toast.eror("Something went wrong");
+      }
+    } else {
+      try {
+        const updated = await updateProduct(selectedProduct.id, {
+          title: formData.title,
+          description: formData.description,
+          price: formData.price,
+          categoryId: formData.categoryId,
+        });
+        toast.success("Product successfully updated");
+        const matchedCategory = categories.find(
+          (c) => c.value === String(formData.categoryId)
+        );
 
-    try {
-      const updated = await updateProduct(selectedProduct.id, {
-        title: formData.title,
-        description: formData.description,
-        price: formData.price,
-        categoryId: formData.categoryId,
-      });
+        const enrichedProduct = {
+          ...updated,
+          category: {
+            id: formData.categoryId,
+            title: matchedCategory?.label || "Category not found",
+          },
+        };
 
-      const matchedCategory = categories.find(
-        (c) => c.value === String(formData.categoryId)
-      );
+        setProducts((prev) =>
+          prev.map((p) => (p.id === enrichedProduct.id ? enrichedProduct : p))
+        );
 
-      const enrichedProduct = {
-        ...updated,
-        category: {
-          id: formData.categoryId,
-          title: matchedCategory?.label || "Category not found",
-        },
-      };
-
-      setProducts((prev) =>
-        prev.map((p) => (p.id === enrichedProduct.id ? enrichedProduct : p))
-      );
-
-      close();
-    } catch (error) {
-      console.error("Error saving Product:", error.message);
+        close();
+      } catch (error) {
+        console.error("Error saving Product:", error.message);
+        toast.eror("Something went wrong");
+      }
     }
   };
 
@@ -124,11 +142,12 @@ export default function Products() {
       await deleteProducts([productToDelete.id]);
 
       await fetchProducts();
-
+      toast.success("Product successfully deleted");
       setConfirmOpened(false);
       setProductToDelete(null);
     } catch (error) {
       console.error("Error deleting product:", error.message);
+      toast.eror("Something went wrong");
     }
   };
 
@@ -139,12 +158,30 @@ export default function Products() {
 
   return (
     <div className="pb-10">
-      <SearchAndFilterBar
-        searchKey="search"
-        filterKey="categories"
-        filterOptions={categories}
-      />
-
+      <h2 className="text-2xl font-semibold mb-4">Products</h2>
+      <div className="flex flex-row gap-4 w-full">
+        <a
+          href="/categories"
+          className="bg-orange-500 text-white px-4 py-1 h-[36px] rounded hover:bg-orange-700"
+        >
+          Categories
+        </a>
+        <SearchAndFilterBar
+          searchKey="search"
+          filterKey="categories"
+          filterOptions={categories}
+        >
+          <button
+            onClick={() => {
+              setSelectedProduct(null);
+              open();
+            }}
+            className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700"
+          >
+            New
+          </button>
+        </SearchAndFilterBar>
+      </div>
       <div className="mt-5 min-h-[80dvh] flex flex-col justify-between">
         <GridWrapper>
           {products.length ? (
@@ -167,24 +204,6 @@ export default function Products() {
         />
       </div>
 
-      <Modal
-        opened={opened}
-        onClose={close}
-        title="Edit Product"
-        centered
-        size="lg"
-        lockScroll={false}
-      >
-        {selectedProduct && (
-          <ProductForm
-            initialValues={selectedProduct}
-            categories={categories}
-            onSubmit={handleEditSubmit}
-            onCancel={close}
-          />
-        )}
-      </Modal>
-
       <ConfirmModal
         opened={confirmOpened}
         onConfirm={handleConfirmDelete}
@@ -193,6 +212,23 @@ export default function Products() {
           productToDelete?.title || ""
         }". This action cannot be undone.`}
       />
+      <Modal
+        opened={opened}
+        onClose={close}
+        title={selectedProduct ? "Edit Product" : "New Product"}
+        centered
+        size="lg"
+        lockScroll={true}
+      >
+        <ProductForm
+          initialValues={selectedProduct || {}}
+          categories={categories}
+          onSubmit={(formData) => {
+            handleEditSubmit(formData);
+          }}
+          onCancel={close}
+        />
+      </Modal>
     </div>
   );
 }

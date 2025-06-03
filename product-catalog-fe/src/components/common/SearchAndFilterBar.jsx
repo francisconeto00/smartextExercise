@@ -7,6 +7,7 @@ export default function SearchAndFilterBar({
   searchKey = "search",
   filterKey = "filter",
   filterOptions = [],
+  children,
 }) {
   const { getQueryParam, setQueryParam } = useQueryParams();
 
@@ -23,25 +24,29 @@ export default function SearchAndFilterBar({
 
   useEffect(() => {
     setQueryParam(filterKey, selectedFilters.join(","));
+    setQueryParam("page", "1");
   }, [selectedFilters]);
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 mb-4">
+    <div className="w-full flex flex-col md:flex-row gap-4 mb-4">
       <TextInput
         placeholder="Search..."
         value={search}
         onChange={(e) => setSearch(e.currentTarget.value)}
-        className="w-full md:w-1/2"
+        className="w-full "
       />
-      <MultiSelect
-        data={filterOptions}
-        value={selectedFilters}
-        onChange={setSelectedFilters}
-        placeholder="Filter..."
-        className="w-full md:w-1/2"
-        searchable
-        clearable
-      />
+      {filterOptions.length > 0 && (
+        <MultiSelect
+          data={filterOptions}
+          value={selectedFilters}
+          onChange={setSelectedFilters}
+          placeholder="Filter..."
+          className="w-full "
+          searchable
+          clearable
+        />
+      )}
+      {children}
     </div>
   );
 }

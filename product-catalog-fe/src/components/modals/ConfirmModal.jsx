@@ -10,7 +10,7 @@ export default function ConfirmModal({ opened, onConfirm, onCancel, message }) {
       centered
       size="xs"
       withCloseButton={false}
-      lockScroll={false} 
+      lockScroll={true}
     >
       <Text size="sm" c="dimmed" mb="md">
         {message}

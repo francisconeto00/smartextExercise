@@ -16,12 +16,7 @@ async function categoryRoutes(req, res) {
     pathParts.length === 2 &&
     pathParts[1] === "categories"
   ) {
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", () => {
-      req.body = JSON.parse(body || "{}");
-      createCategory(req, res);
-    });
+    createCategory(req, res);
     return;
   }
 
@@ -35,13 +30,7 @@ async function categoryRoutes(req, res) {
       res.writeHead(400);
       return res.end("Invalid ID");
     }
-
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", () => {
-      req.body = JSON.parse(body || "{}");
-      updateCategory(req, res, id);
-    });
+    updateCategory(req, res, id);
     return;
   }
 

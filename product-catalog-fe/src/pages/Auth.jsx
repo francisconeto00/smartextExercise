@@ -10,7 +10,6 @@ export default function Auth() {
   useEffect(() => {
     const check = async () => {
       const isLoggedIn = await checkAuth();
-      console.log("isLoggedIn", isLoggedIn);
       if (isLoggedIn) {
         navigate("/products", { replace: true });
       }

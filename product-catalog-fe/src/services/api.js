@@ -5,7 +5,6 @@ export async function api(
   endpoint,
   { method = "GET", body, headers = {}, credentials = "include" } = {}
 ) {
-  console.log("baseUrl", baseUrl);
   const config = {
     method,
     headers: {

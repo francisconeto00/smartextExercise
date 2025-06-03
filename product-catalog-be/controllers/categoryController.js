@@ -1,4 +1,7 @@
 const { Category } = require("../models");
+const logger = require("../utils/logger");
+const url = require("url");
+const { Op } = require("sequelize");
 
 async function createCategory(req, res) {
   let body = "";
@@ -13,7 +16,6 @@ async function createCategory(req, res) {
         res.writeHead(400);
         return res.end("Missing title");
       }
-
       const category = await Category.create({ title, description });
       res.writeHead(201, { "Content-Type": "application/json" });
       res.end(JSON.stringify(category));
@@ -71,10 +73,40 @@ async function deleteCategory(req, res, id) {
 
 async function getCategories(req, res) {
   try {
-    const categories = await Category.findAll();
+    const { query } = url.parse(req.url, true);
+    const page = parseInt(query.page) || 1;
+    const pageSize = parseInt(query.pageSize) || 12;
+    const offset = (page - 1) * pageSize;
+    if (parseInt(query.all) == true) {
+      (offset = null), (pageSize = null), (page = null);
+    }
+    logger.info(`getCategories called with page=${page} pageSize=${pageSize}`);
 
+    const filters = {};
+    if (query.search) {
+      filters[Op.or] = [
+        { title: { [Op.like]: `%${query.search}%` } },
+        { description: { [Op.like]: `%${query.search}%` } },
+      ];
+      logger.info(`Filtering by search=${query.search}`);
+    }
+    const { rows: data, count: totalItems } = await Category.findAndCountAll({
+      where: filters,
+      offset,
+      limit: pageSize,
+    });
+    const totalPages = Math.ceil(totalItems / pageSize);
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(categories));
+    res.end(
+      JSON.stringify({
+        data,
+        pagination: {
+          page,
+          pageSize,
+          totalPages,
+        },
+      })
+    );
   } catch (error) {
     console.error("Error fetching categories:", error);
     res.writeHead(500, { "Content-Type": "application/json" });

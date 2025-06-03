@@ -10,7 +10,7 @@ export default function PaginationControls({ page, totalPages, pageSize }) {
 
   const handlePageSizeChange = (value) => {
     if (value) {
-      setQueryParam({ page: 1, pageSize: parseInt(value, 10) });
+      setQueryParam({ page: 1, pageSize: parseInt(value, 12) });
     }
   };
 
@@ -19,7 +19,7 @@ export default function PaginationControls({ page, totalPages, pageSize }) {
       <Pagination total={totalPages} value={page} onChange={handlePageChange} />
       {!!totalPages && (
         <Select
-          data={["8", "12", "18", "50"]}
+          data={["9", "12", "18", "60"]}
           value={String(pageSize)}
           onChange={handlePageSizeChange}
           style={{ width: 80 }}
