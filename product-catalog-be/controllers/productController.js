@@ -14,8 +14,14 @@ async function getAllProducts(req, res) {
 
     const filters = {};
     if (query.categoryId) {
-      filters.categoryId = query.categoryId;
-      logger.info(`Filtering by categoryId=${query.categoryId}`);
+      const categoryIds = query.categoryId
+        .split(",")
+        .map((id) => parseInt(id.trim()))
+        .filter((id) => !isNaN(id));
+      if (categoryIds.length > 0) {
+        filters.categoryId = { [Op.in]: categoryIds };
+        logger.info(`Filtering by categoryIds=${categoryIds}`);
+      }
     }
     if (query.search) {
       filters[Op.or] = [

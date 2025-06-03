@@ -69,4 +69,21 @@ async function deleteCategory(req, res, id) {
   }
 }
 
-module.exports = { createCategory, updateCategory, deleteCategory };
+async function getCategories(req, res) {
+  try {
+    const categories = await Category.findAll();
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(categories));
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Failed to fetch categories" }));
+  }
+}
+module.exports = {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+};

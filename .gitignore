@@ -2,8 +2,7 @@ node_modules/
 
 .env
 
-
-
 *.DS_Store
-*Thumbs.db
-config/config.json
+*/Thumbs.db
+*/config/config.json
+logs/

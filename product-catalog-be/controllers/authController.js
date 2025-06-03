@@ -31,11 +31,21 @@ async function register(req, res) {
       const hashed = await bcrypt.hash(password, 10);
       const user = await User.create({ username, password: hashed });
       logger.info(`User created: ${username}`);
-      res.writeHead(201, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ id: user.id, username: user.username }));
+      const token = jwt.sign({ id: user.id, username: user.username }, secret, {
+        expiresIn: "1h",
+      });
+      res.writeHead(201, {
+        "Content-Type": "application/json",
+        "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax${
+          process.env.NODE_ENV === "production" ? "; Secure" : ""
+        }`,
+      });
+      res.end(JSON.stringify({ message: "success" }));
     } catch (err) {
       logger.error(`Register error: ${err.message}`);
-      res.writeHead(500, { "Content-Type": "application/json" });
+      res.writeHead(500, {
+        "Content-Type": "application/json",
+      });
       res.end(JSON.stringify({ error: "Server error" }));
     }
   });
@@ -71,8 +81,13 @@ async function login(req, res) {
       const token = jwt.sign({ id: user.id, username: user.username }, secret, {
         expiresIn: "1h",
       });
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ token }));
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": `token=${token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax${
+          process.env.NODE_ENV === "production" ? "; Secure" : ""
+        }`,
+      });
+      res.end(JSON.stringify({ message: "success" }));
     } catch (err) {
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Server error" }));

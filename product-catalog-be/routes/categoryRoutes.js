@@ -3,6 +3,7 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
+  getCategories,
 } = require("../controllers/categoryController");
 
 async function categoryRoutes(req, res) {
@@ -57,6 +58,14 @@ async function categoryRoutes(req, res) {
 
     deleteCategory(req, res, id);
     return;
+  }
+
+  if (
+    method === "GET" &&
+    pathParts.length === 2 &&
+    pathParts[1] === "categories"
+  ) {
+    return getCategories(req, res);
   }
 
   res.writeHead(404);
