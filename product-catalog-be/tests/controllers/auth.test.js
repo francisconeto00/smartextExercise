@@ -1,5 +1,10 @@
 process.env.JWT_SECRET = "testsecret";
-const { register, login } = require("../../controllers/authController");
+
+const {
+  register,
+  login,
+  checkAuth,
+} = require("../../controllers/authController");
 const { User } = require("../../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -58,10 +63,27 @@ describe("Auth Controller", () => {
       });
     });
 
-    test("register a new user successfully", (done) => {
+    test("register with existing username returns 409", (done) => {
+      User.findOne.mockResolvedValue({ id: 1, username: "existing" });
+
+      const req = createReq({ username: "existing", password: "pass" });
+      const res = createRes();
+
+      register(req, res);
+      req.trigger();
+
+      setImmediate(() => {
+        expect(res.statusCode).toBe(409);
+        expect(JSON.parse(res.body).error).toBe("User exists");
+        done();
+      });
+    });
+
+    test("registers a new user and returns success message with cookie", (done) => {
       User.findOne.mockResolvedValue(null);
       bcrypt.hash.mockResolvedValue("hashedpassword");
       User.create.mockResolvedValue({ id: 1, username: "newuser" });
+      jwt.sign.mockReturnValue("signedtoken");
 
       const req = createReq({ username: "newuser", password: "pass" });
       const res = createRes();
@@ -78,26 +100,10 @@ describe("Auth Controller", () => {
           username: "newuser",
           password: "hashedpassword",
         });
+        expect(jwt.sign).toHaveBeenCalled();
         expect(res.statusCode).toBe(201);
-        const data = JSON.parse(res.body);
-        expect(data).toHaveProperty("id", 1);
-        expect(data).toHaveProperty("username", "newuser");
-        done();
-      });
-    });
-
-    test("register with existing username returns 409", (done) => {
-      User.findOne.mockResolvedValue({ id: 1, username: "newuser" });
-
-      const req = createReq({ username: "newuser", password: "pass" });
-      const res = createRes();
-
-      register(req, res);
-      req.trigger();
-
-      setImmediate(() => {
-        expect(res.statusCode).toBe(409);
-        expect(JSON.parse(res.body).error).toBe("User exists");
+        expect(res.headers["Set-Cookie"]).toMatch(/^token=signedtoken/);
+        expect(JSON.parse(res.body)).toEqual({ message: "success" });
         done();
       });
     });
@@ -157,7 +163,7 @@ describe("Auth Controller", () => {
       });
     });
 
-    test("login successful returns token", (done) => {
+    test("successful login returns token and sets cookie", (done) => {
       User.findOne.mockResolvedValue({
         id: 1,
         username: "user",
@@ -173,15 +179,72 @@ describe("Auth Controller", () => {
       req.trigger();
 
       setImmediate(() => {
+        expect(User.findOne).toHaveBeenCalledWith({
+          where: { username: "user" },
+        });
+        expect(bcrypt.compare).toHaveBeenCalledWith("pass", "hashed");
         expect(jwt.sign).toHaveBeenCalledWith(
           { id: 1, username: "user" },
           process.env.JWT_SECRET,
           { expiresIn: "1h" }
         );
         expect(res.statusCode).toBe(200);
-        expect(JSON.parse(res.body)).toHaveProperty("token", "signedtoken");
+        expect(res.headers["Set-Cookie"]).toMatch(/^token=signedtoken/);
+        expect(JSON.parse(res.body)).toEqual({ message: "success" });
         done();
       });
+    });
+  });
+
+  describe("checkAuth", () => {
+    test("returns 401 if no cookie is provided", async () => {
+      const req = { headers: {} };
+      const res = createRes();
+
+      await checkAuth(req, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res.body).error).toBe("No token provided");
+    });
+
+    test("returns 401 if token is not found in cookie", async () => {
+      const req = { headers: { cookie: "othercookie=value" } };
+      const res = createRes();
+
+      await checkAuth(req, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res.body).error).toBe("Token not found");
+    });
+
+    test("returns 200 if valid token is provided", async () => {
+      jwt.verify.mockReturnValue({ id: 1, username: "user" });
+
+      const req = { headers: { cookie: "token=validtoken" } };
+      const res = createRes();
+
+      await checkAuth(req, res);
+
+      expect(jwt.verify).toHaveBeenCalledWith(
+        "validtoken",
+        process.env.JWT_SECRET
+      );
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body)).toEqual({ message: "Authenticated" });
+    });
+
+    test("returns 401 if token is invalid", async () => {
+      jwt.verify.mockImplementation(() => {
+        throw new Error("invalid token");
+      });
+
+      const req = { headers: { cookie: "token=invalidtoken" } };
+      const res = createRes();
+
+      await checkAuth(req, res);
+
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res.body).error).toBe("Invalid or expired token");
     });
   });
 });

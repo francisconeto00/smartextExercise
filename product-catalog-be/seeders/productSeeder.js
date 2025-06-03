@@ -26,11 +26,10 @@ async function seedProducts() {
 
     await Product.bulkCreate(products);
     console.log("Products seeded successfully.");
-    process.exit(0);
   } catch (error) {
     console.error("Error seeding products:", error);
-    process.exit(1);
+    throw error;
   }
 }
 
-seedProducts();
+module.exports = seedProducts;

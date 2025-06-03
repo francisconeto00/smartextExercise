@@ -19,11 +19,10 @@ async function seedCategories() {
 
     await Category.bulkCreate(categories);
     console.log("Categories seeded successfully.");
-    process.exit(0);
   } catch (error) {
     console.error("Error seeding categories:", error);
-    process.exit(1);
+    throw error;
   }
 }
 
-seedCategories();
+module.exports = seedCategories;

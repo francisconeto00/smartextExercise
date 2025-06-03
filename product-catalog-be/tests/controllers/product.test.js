@@ -61,6 +61,8 @@ describe("Product Controller", () => {
 
       await getAllProducts(req, res);
 
+      const response = JSON.parse(res.body);
+
       expect(res.statusCode).toBe(200);
       expect(Product.findAndCountAll).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -68,7 +70,12 @@ describe("Product Controller", () => {
           offset: 0,
         })
       );
-      expect(JSON.parse(res.body)).toHaveLength(2);
+      expect(response.data).toHaveLength(2);
+      expect(response.pagination).toEqual({
+        page: 1,
+        pageSize: 2,
+        totalPages: 1,
+      });
     });
 
     test("handles internal error", async () => {
